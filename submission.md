@@ -15,3 +15,13 @@ I used Codex to read and summarize the repository structure, trace route-to-serv
 **Data flow — rating a song:** `POST /songs/<song_id>/rate` reaches `routes/songs.py`, which reads `user_id` and `score` and calls `notification_service.rate_song()`. The service validates the score and referenced song and user, updates an existing `Rating` or inserts one, commits the transaction, and returns the rating. The route serializes it with `Rating.to_dict()` and responds with JSON. `models.py` enforces one rating per user and song through a unique constraint.
 
 **Organization pattern:** Routes handle HTTP input and output, while services own database queries and feature behavior. Services use the shared SQLAlchemy session from `app.py`; model relationships and association tables connect the entities.
+
+## Root cause analyses
+
+**Issue #1 — My listening streak keeps resetting**
+
+- **How I reproduced it:** Before editing code, I ran `tests/test_streaks.py`. The Saturday June 15 to Sunday June 16 case failed: `update_listening_streak()` left the streak at 1 instead of incrementing it to 2. The surrounding Monday-to-Tuesday, same-day, and skipped-day cases passed.
+- **How I found the root cause:** I followed `POST /songs/<song_id>/listen` in `routes/songs.py` to `record_listening_event()` and `update_listening_streak()` in `services/streak_service.py`. The test established that the dates were consecutive; the weekday condition in the increment branch specifically rejected Sunday.
+- **The root cause:** `update_listening_streak()` incremented only when `days_since_last == 1 and today.weekday() != 6`. Python's `weekday()` returns 6 for Sunday, so a Saturday-to-Sunday interval of exactly one day fell through to the reset branch.
+- **My fix:** Increment whenever `days_since_last == 1`. Calendar-day distance already expresses the rule, including weekend transitions.
+- **Side-effect check:** I reran the streak tests to check Sunday, ordinary consecutive days, repeated listens on one day, first listens, and a skipped day.
