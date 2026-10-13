@@ -2,7 +2,13 @@
 
 A social music app where friends share songs, build collaborative playlists, and track listening stats.
 
-This is the starter repo for **Project 5: Mixtape Bug Hunt**. The app has five open issues in its tracker. Your job is to find, fix, and document at least three of them.
+This is the **Project 5: Mixtape Bug Hunt** starter app. The `bugfix/mixtape` branch fixes and documents all five reported issues.
+
+## Bugfix demo
+
+[![Watch the Mixtape bugfix demo](demo/preview.png)](demo/mixtape-bugfix-demo.mp4)
+
+[Watch the 40-second MP4 demo](demo/mixtape-bugfix-demo.mp4). It shows real Flask API responses for all five fixes: the Sunday streak, today's listening feed, unique search results, rating notifications, and the final playlist song. The video is silent and uses a controlled in-memory database so the date-boundary examples are repeatable. To regenerate it, install `pillow` and `imageio-ffmpeg` alongside `requirements.txt`, then run `python demo/generate_demo.py`.
 
 ---
 
