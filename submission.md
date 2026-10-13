@@ -33,3 +33,11 @@ I used Codex to read and summarize the repository structure, trace route-to-serv
 - **The root cause:** The service used `now - timedelta(hours=24)` as its cutoff. At 09:00, this allows events from 09:00 on the previous calendar day onward, so yesterday evening remains in the feed.
 - **My fix:** Set the cutoff to midnight of the current UTC calendar day. The existing query and latest-event-per-friend selection then operate only on today's events.
 - **Side-effect check:** I added `tests/test_feed.py`, a regression test at the day boundary: yesterday at 23:59 is excluded and today at 00:00 is included. The activity feed remains separately unfiltered by date.
+
+**Issue #3 — The same song keeps showing up twice in search**
+
+- **How I reproduced it:** Before editing code, `GET /songs/search?q=Anthem` returned three identical entries for Crown Heights Anthem. The existing multi-tag search test also failed with three results; one-tag and no-tag search cases passed.
+- **How I found the root cause:** I followed `routes/songs.py` to `search_songs()` in `services/search_service.py`, then compared the outer join to the `song_tags` association in `models.py`. The three copies matched the song's three tag rows, confirming that the query result cardinality came from the join.
+- **The root cause:** The outer join produces one SQL row per matching song/tag pair. SQLAlchemy's `.scalars().all()` retained each repeated `Song` entity, and the service serialized all of them. The join was unnecessary for matching titles or artists, but its repeated rows reached the response.
+- **My fix:** Add `.unique()` to the scalar result before `.all()`, so each matching `Song` entity is serialized once while retaining the existing outer-join query.
+- **Side-effect check:** I reran all search tests, covering title and artist matches, songs with zero, one, and three tags, and a query with no matches.
