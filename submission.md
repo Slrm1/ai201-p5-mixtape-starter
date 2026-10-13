@@ -41,3 +41,11 @@ I used Codex to read and summarize the repository structure, trace route-to-serv
 - **The root cause:** The outer join produces one SQL row per matching song/tag pair. SQLAlchemy's `.scalars().all()` retained each repeated `Song` entity, and the service serialized all of them. The join was unnecessary for matching titles or artists, but its repeated rows reached the response.
 - **My fix:** Add `.unique()` to the scalar result before `.all()`, so each matching `Song` entity is serialized once while retaining the existing outer-join query.
 - **Side-effect check:** I reran all search tests, covering title and artist matches, songs with zero, one, and three tags, and a query with no matches.
+
+**Issue #4 — I got notified when a friend added my song to a playlist but not when they rated it**
+
+- **How I reproduced it:** Before editing code, I posted a five-star rating from kenji to a song shared by aaliya. `POST /songs/<song_id>/rate` returned 201, but aaliya's `song_rated` notification count stayed at zero.
+- **How I found the root cause:** I traced the rate route in `routes/songs.py` to `rate_song()` in `services/notification_service.py`, then compared it with `add_to_playlist()` in the same service. The playlist path calls `create_notification()` after saving the action; the rating path returned immediately after committing the rating.
+- **The root cause:** `rate_song()` saved the `Rating` but never created a `Notification`. Since notification retrieval reads stored rows, neither the immediate response nor later `GET /users/<id>/notifications` could show a rating notification.
+- **My fix:** After committing a rating, call `create_notification()` for the song's sharer with the rater, song, and score, unless the sharer rated their own song. This follows the existing playlist-add notification pattern.
+- **Side-effect check:** I added `tests/test_notifications.py` to verify the rating persists, a friend rating appears through the notifications endpoint, and rating one's own song does not create a self-notification.
