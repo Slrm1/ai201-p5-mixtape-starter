@@ -2,7 +2,7 @@
 
 ## AI usage
 
-I used Codex to read and summarize the repository structure, trace route-to-service calls, run reproductions and tests, and review each change. I checked its explanations against the source and the observed behavior before documenting each root cause. Specific debugging examples appear in the entries below.
+I used Codex to read the README, models, routes, services, seed data, and tests and to trace each endpoint into its service. It helped me compare the playlist-add and rating paths and reason about SQL join multiplicity and date boundaries. I verified those explanations with failing baseline tests or controlled HTTP requests before editing code, then reran focused tests and the full suite. The seed data's current timestamps did not provide a stable yesterday/today feed boundary, so I controlled the clock and event timestamps for that reproduction rather than assuming the seed alone proved it.
 
 ## Codebase map
 
@@ -10,7 +10,7 @@ I used Codex to read and summarize the repository structure, trace route-to-serv
 - `models.py` defines users, songs, tags, listening events, ratings, playlists, and notifications. Its association tables represent friendships, song tags, and ordered playlist entries. Model `to_dict()` methods shape API data.
 - `routes/songs.py` handles search, song detail, ratings, and listens. `routes/playlists.py` handles playlist creation, detail, song listing, and additions. `routes/users.py` exposes profiles, streaks, and notifications. `routes/feed.py` exposes listening and activity feeds. Routes parse requests, call services, and return JSON.
 - `services/search_service.py` queries songs; `streak_service.py` records listening events and maintains streaks; `feed_service.py` assembles friends' listening activity; `playlist_service.py` creates and retrieves playlists; `notification_service.py` saves ratings and playlist additions and manages notifications.
-- `seed_data.py` builds sample users, friendships, songs, tags, listening events, playlists, ratings, and notifications. `tests/` contains focused service tests using in-memory SQLite databases.
+- `seed_data.py` builds sample users, friendships, songs, tags, listening events, playlists, and notifications. `tests/` contains focused service tests using in-memory SQLite databases.
 
 **Data flow — rating a song:** `POST /songs/<song_id>/rate` reaches `routes/songs.py`, which reads `user_id` and `score` and calls `notification_service.rate_song()`. The service validates the score and referenced song and user, updates an existing `Rating` or inserts one, commits the transaction, and returns the rating. The route serializes it with `Rating.to_dict()` and responds with JSON. `models.py` enforces one rating per user and song through a unique constraint.
 
@@ -57,3 +57,9 @@ I used Codex to read and summarize the repository structure, trace route-to-serv
 - **The root cause:** `songs[:-1]` excludes the final element of the ordered query result on every request. An empty playlist still returned an empty list, masking the issue there.
 - **My fix:** Serialize all queried songs without slicing. The query already restricts them to the requested playlist and orders them by position.
 - **Side-effect check:** I reran the playlist tests for complete count, position order, and an empty playlist, then ran the full suite.
+
+## Submission evidence
+
+- Branch: https://github.com/Slrm1/ai201-p5-mixtape-starter/tree/bugfix/mixtape
+- Commit history image: [git-log.png](git-log.png), rendered from `git log --oneline -6` on the bugfix branch.
+- Final test run: `python -m pytest tests/ -q` — 15 passed.
