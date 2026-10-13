@@ -10,6 +10,20 @@ This is the **Project 5: Mixtape Bug Hunt** starter app. The `bugfix/mixtape` br
 
 [Watch the 40-second MP4 demo](demo/mixtape-bugfix-demo.mp4). It shows real Flask API responses for all five fixes: the Sunday streak, today's listening feed, unique search results, rating notifications, and the final playlist song. The video is silent and uses a controlled in-memory database so the date-boundary examples are repeatable. To regenerate it, install `pillow` and `imageio-ffmpeg` alongside `requirements.txt`, then run `python demo/generate_demo.py`.
 
+## Screenshots
+
+These stills come from the demo's verified API responses.
+
+| Fix | Screenshot |
+|---|---|
+| Sunday streak | [![Streak reaches 13 on Sunday](demo/screenshots/streak.png)](demo/screenshots/streak.png) |
+| Today's listening feed | [![Only today's friend appears](demo/screenshots/feed.png)](demo/screenshots/feed.png) |
+| Unique search result | [![Anthem appears once](demo/screenshots/search.png)](demo/screenshots/search.png) |
+| Rating notification | [![Song rating creates a notification](demo/screenshots/notifications.png)](demo/screenshots/notifications.png) |
+| Playlist songs | [![Final playlist song is returned](demo/screenshots/playlist.png)](demo/screenshots/playlist.png) |
+
+[Commit-history screenshot](git-log.png) shows the five separate fix commits.
+
 ---
 
 ## App Structure

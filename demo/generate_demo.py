@@ -164,6 +164,10 @@ def main():
             render_slide(index, title, subtitle, lines, frame)
             frames.append(frame)
         shutil.copyfile(frames[0], ROOT / "demo" / "preview.png")
+        screenshots = ROOT / "demo" / "screenshots"
+        screenshots.mkdir(exist_ok=True)
+        for index, name in enumerate(("streak", "feed", "search", "notifications", "playlist"), start=1):
+            shutil.copyfile(frames[index], screenshots / f"{name}.png")
         manifest = temp_path / "frames.txt"
         with manifest.open("w", encoding="utf-8") as file:
             for frame in frames:
