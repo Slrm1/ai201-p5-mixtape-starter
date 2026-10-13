@@ -49,3 +49,11 @@ I used Codex to read and summarize the repository structure, trace route-to-serv
 - **The root cause:** `rate_song()` saved the `Rating` but never created a `Notification`. Since notification retrieval reads stored rows, neither the immediate response nor later `GET /users/<id>/notifications` could show a rating notification.
 - **My fix:** After committing a rating, call `create_notification()` for the song's sharer with the rater, song, and score, unless the sharer rated their own song. This follows the existing playlist-add notification pattern.
 - **Side-effect check:** I added `tests/test_notifications.py` to verify the rating persists, a friend rating appears through the notifications endpoint, and rating one's own song does not create a self-notification.
+
+**Issue #5 — The last song in a playlist never shows up**
+
+- **How I reproduced it:** Before editing code, `GET /playlists/<Friday Energy id>/songs` returned six songs for a playlist seeded with seven entries. Existing tests likewise returned four of five tracks and omitted the last title.
+- **How I found the root cause:** I followed `routes/playlists.py` to `get_playlist_songs()` in `services/playlist_service.py`. The database query sorted all playlist entries by position, but the return expression sliced off the final song. This explained why adding another song would reveal the previous last song while hiding the new one.
+- **The root cause:** `songs[:-1]` excludes the final element of the ordered query result on every request. An empty playlist still returned an empty list, masking the issue there.
+- **My fix:** Serialize all queried songs without slicing. The query already restricts them to the requested playlist and orders them by position.
+- **Side-effect check:** I reran the playlist tests for complete count, position order, and an empty playlist, then ran the full suite.
