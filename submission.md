@@ -25,3 +25,11 @@ I used Codex to read and summarize the repository structure, trace route-to-serv
 - **The root cause:** `update_listening_streak()` incremented only when `days_since_last == 1 and today.weekday() != 6`. Python's `weekday()` returns 6 for Sunday, so a Saturday-to-Sunday interval of exactly one day fell through to the reset branch.
 - **My fix:** Increment whenever `days_since_last == 1`. Calendar-day distance already expresses the rule, including weekend transitions.
 - **Side-effect check:** I reran the streak tests to check Sunday, ordinary consecutive days, repeated listens on one day, first listens, and a skipped day.
+
+**Issue #2 — Friends Listening Now shows people from yesterday**
+
+- **How I reproduced it:** Before editing code, I fixed the feed clock at Sunday 09:00 UTC, set a friend's last listening event to Saturday 23:00 UTC, and requested `GET /feed/<nova_id>/listening-now`. The friend appeared despite having no Sunday listen.
+- **How I found the root cause:** I traced `routes/feed.py` into `get_friends_listening_now()` in `services/feed_service.py`, then compared the event timestamp filter with the endpoint's calendar-day expectation. The query included the previous night's event because it was less than 24 hours old.
+- **The root cause:** The service used `now - timedelta(hours=24)` as its cutoff. At 09:00, this allows events from 09:00 on the previous calendar day onward, so yesterday evening remains in the feed.
+- **My fix:** Set the cutoff to midnight of the current UTC calendar day. The existing query and latest-event-per-friend selection then operate only on today's events.
+- **Side-effect check:** I added `tests/test_feed.py`, a regression test at the day boundary: yesterday at 23:59 is excluded and today at 00:00 is included. The activity feed remains separately unfiltered by date.
