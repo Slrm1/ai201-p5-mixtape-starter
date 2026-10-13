@@ -1,0 +1,17 @@
+# Mixtape Bug Hunt
+
+## AI usage
+
+I used Codex to read and summarize the repository structure, trace route-to-service calls, run reproductions and tests, and review each change. I checked its explanations against the source and the observed behavior before documenting each root cause. Specific debugging examples appear in the entries below.
+
+## Codebase map
+
+- `app.py` creates the Flask application, configures SQLAlchemy, registers the four route blueprints, and creates database tables.
+- `models.py` defines users, songs, tags, listening events, ratings, playlists, and notifications. Its association tables represent friendships, song tags, and ordered playlist entries. Model `to_dict()` methods shape API data.
+- `routes/songs.py` handles search, song detail, ratings, and listens. `routes/playlists.py` handles playlist creation, detail, song listing, and additions. `routes/users.py` exposes profiles, streaks, and notifications. `routes/feed.py` exposes listening and activity feeds. Routes parse requests, call services, and return JSON.
+- `services/search_service.py` queries songs; `streak_service.py` records listening events and maintains streaks; `feed_service.py` assembles friends' listening activity; `playlist_service.py` creates and retrieves playlists; `notification_service.py` saves ratings and playlist additions and manages notifications.
+- `seed_data.py` builds sample users, friendships, songs, tags, listening events, playlists, ratings, and notifications. `tests/` contains focused service tests using in-memory SQLite databases.
+
+**Data flow — rating a song:** `POST /songs/<song_id>/rate` reaches `routes/songs.py`, which reads `user_id` and `score` and calls `notification_service.rate_song()`. The service validates the score and referenced song and user, updates an existing `Rating` or inserts one, commits the transaction, and returns the rating. The route serializes it with `Rating.to_dict()` and responds with JSON. `models.py` enforces one rating per user and song through a unique constraint.
+
+**Organization pattern:** Routes handle HTTP input and output, while services own database queries and feature behavior. Services use the shared SQLAlchemy session from `app.py`; model relationships and association tables connect the entities.
